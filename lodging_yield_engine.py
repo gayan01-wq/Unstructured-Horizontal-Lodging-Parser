@@ -47,7 +47,8 @@ def clear_step_1_profile():
     st.session_state["subject_hotel_input"] = ""
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
-        "Hotel Identity Name": ["", "", "", "", "", "", "", ""]
+        "Hotel Identity Name": ["", "", "", "", "", "", "", ""],
+        "Public Rate (Lighthouse/OTA)": [0.0] * 8
     }
     st.session_state.compset_grid_df = pd.DataFrame(default_compset_rows)
 
@@ -61,7 +62,6 @@ with col_m1:
 with col_m2:
     country = st.text_input("Destination Country", value="Oman", key="country_input")
 with col_m3:
-    # Fully closed and structurally validated multi-currency dictionary
     currency_options = {
         "USD ($) - United States Dollar": {"symbol": "$", "floor": 135.00, "factor": 1.0},
         "OMR (𐎱) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
@@ -89,18 +89,20 @@ with col_m3:
 st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
 
 if "compset_grid_df" not in st.session_state:
+    # Initial benchmarks automatically converted based on selected currency
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
-        "Hotel Identity Name": ["Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub", "", "", "", "", ""]
+        "Hotel Identity Name": ["Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub", "", "", "", "", ""],
+        "Public Rate (Lighthouse/OTA)": [65.0, 72.0, 58.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     }
     st.session_state.compset_grid_df = pd.DataFrame(default_compset_rows)
 
-col_prop1, col_prop2 = st.columns([1, 1])
+col_prop1, col_prop2 = st.columns([1, 1.2])
 with col_prop1:
     user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa", key="subject_hotel_input")
 
 with col_prop2:
-    st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
+    st.write("📋 **Map Competitive Set Names & Current Market Pricing:**")
     edited_compset_grid = st.data_editor(
         st.session_state.compset_grid_df,
         num_rows="fixed",
@@ -109,14 +111,21 @@ with col_prop2:
     )
     st.session_state.compset_grid_df = edited_compset_grid
     
+    # Track names and rates simultaneously for index averaging
     active_compset = []
+    compset_rates = []
     for _, row in edited_compset_grid.iterrows():
         val = row["Hotel Identity Name"]
+        rate = row["Public Rate (Lighthouse/OTA)"]
         if val is not None:
             val_str = str(val).strip()
             if val_str != "" and val_str.lower() != "none":
                 active_compset.append(val_str)
+                if rate > 0:
+                    compset_rates.append(rate)
+                    
     compset_count = len(active_compset)
+    average_compset_rate = sum(compset_rates) / len(compset_rates) if len(compset_rates) > 0 else 0.0
 
 compset_verification = f"✅ {compset_count} Competitor(s) Mapped" if compset_count > 0 else "📝 Awaiting Compset Entry"
 location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
@@ -213,6 +222,8 @@ for i in range(3):
     
     if fore_rn > 0 and fore_rev > 0:
         has_valid_data_rendered = True
+        
+        # SYSTEM CALCULATES USER HOTEL ADR INTERNALLY FROM YOUR TYPED VALUES
         forecast_adr = fore_rev / fore_rn
         rn_capture_pct = (pace_rn / fore_rn) * 100
         rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
@@ -251,6 +262,13 @@ for i in range(3):
         proposed_ai_rate = forecast_adr * ai_markup
         tracking_label = "MTD" if is_current_month else "OTB"
         
+        # CALCULATING YOUR DYNAMIC MARKET ARI INDEX LEAD/LAG PROJECTION
+        if average_compset_rate > 0:
+            ari_index = (proposed_ai_rate / average_compset_rate) * 100
+            ari_string = f"{ari_index:.1f}% (Value Positioning to capture share)" if ari_index < 100 else f"{ari_index:.1f}% (Premium Market Leader Positioning)"
+        else:
+            ari_string = "N/A (No Competitor Pricing Entered)"
+
         with st.container():
             st.markdown(f"### 📅 Horizon Period: **{m_name}**")
             col_info, col_guardrail = st.columns([3, 2])
@@ -260,10 +278,10 @@ for i in range(3):
                 st.write(f"*{demand_desc}*")
                 st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
                 st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity indexes (MTD Actuals / On-The-Books Pickup curves) against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
-                st.write(f"* **Target Forecast ADR Baseline:** {currency_symbol}{forecast_adr:.2f}")
+                st.write(f"* **Target Forecast ADR Baseline (Calculated):** {currency_symbol}{forecast_adr:.2f}")
                 st.write(f"* **Inventory Materialization ({tracking_label}):** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Inventory Committed)")
                 st.write(f"* **Revenue Volume Secured:** {currency_symbol}{pace_rev:,.2f} / {currency_symbol}{fore_rev:,.2f} ({rev_capture_pct:.1f}% Revenue Materialized)")
-                st.write(f"* **Mapped Competitive Landscape:** Cross-referencing pricing vectors against `{compset_count}` active competitor profiles mapped in Step 1.")
+                st.write(f"* **Competitive Landscape Index (ARI):** Proposed strategy positions property at an ARI Index of `{ari_string}` against mapped compset benchmarks.")
                 st.write(f"* **Agent Yield Optimization Vector:** `{ai_behavior_label}` targeting an adjustment markup of **{int((ai_markup-1)*100)}%**")
                 st.write(f"* **Active Safety Parameter (Circuit Breaker Floor):** {currency_symbol}{floor_adjusted:.2f}")
 
