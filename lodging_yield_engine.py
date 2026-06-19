@@ -101,5 +101,12 @@ with col_prop1:
 
 with col_prop2:
     st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
+    
+    # Fully closed closing parenthesis added right here on st.data_editor()
     edited_compset_grid = st.data_editor(
-        st.session_
+        st.session_state.compset_grid_df,
+        num_rows="fixed",
+        use_container_width=True,
+        key="compset_grid_editor"
+    )
+    st.session_state.compset_grid_df = edited_compset_grid
