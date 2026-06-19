@@ -61,7 +61,6 @@ with col_m1:
 with col_m2:
     country = st.text_input("Destination Country", value="Oman", key="country_input")
 with col_m3:
-    # Fully closed and structurally validated multi-currency dictionary
     currency_options = {
         "USD ($) - United States Dollar": {"symbol": "$", "floor": 135.00, "factor": 1.0},
         "OMR (𐎱) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
@@ -101,8 +100,6 @@ with col_prop1:
 
 with col_prop2:
     st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
-    
-    # Fully closed closing parenthesis added right here on st.data_editor()
     edited_compset_grid = st.data_editor(
         st.session_state.compset_grid_df,
         num_rows="fixed",
@@ -110,3 +107,114 @@ with col_prop2:
         key="compset_grid_editor"
     )
     st.session_state.compset_grid_df = edited_compset_grid
+    
+    active_compset = []
+    for _, row in edited_compset_grid.iterrows():
+        val = row["Hotel Identity Name"]
+        if val is not None:
+            val_str = str(val).strip()
+            if val_str != "" and val_str.lower() != "none":
+                active_compset.append(val_str)
+    compset_count = len(active_compset)
+
+compset_verification = f"✅ {compset_count} Competitor(s) Mapped" if compset_count > 0 else "📝 Awaiting Compset Entry"
+location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
+hotel_verification = "✅ Hotel Name Saved" if user_hotel.strip() else "📝 Awaiting Hotel Name"
+
+st.markdown(f"**Profile Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {location_verification} &nbsp;&nbsp;|&nbsp;&nbsp; {hotel_verification} &nbsp;&nbsp;|&nbsp;&nbsp; {compset_verification}")
+
+# --- 2. Dynamic Forward 3-Month Matrix Calendar Calculations ---
+current_month_name = datetime.now().strftime("%B")
+months_list = [current_month_name]
+current_month_num = datetime.now().month
+
+for i in range(1, 3):
+    future_month = datetime(2026, ((current_month_num + i - 1) % 12) + 1, 1)
+    months_list.append(future_month.strftime("%B"))
+
+st.markdown("---")
+
+# --- 3. Structured Data Metrics Input Grid (MTD/OTB vs Forecast Rows) ---
+st.subheader(f"📊 Step 2: Input Internal Performance Metrics ({currency_symbol})")
+st.write("Track active pacing data alongside expected full-month forecast thresholds to generate context-aware AI parameters:")
+
+row_labels = [
+    f"{months_list[0]} (Current MTD Actuals)",
+    f"{months_list[0]} (Full Month Forecast Target)",
+    f"{months_list[1]} (On-The-Books / OTB Pace)",
+    f"{months_list[1]} (Full Month Forecast Target)",
+    f"{months_list[2]} (On-The-Books / OTB Pace)",
+    f"{months_list[2]} (Full Month Forecast Target)"
+]
+
+default_pacing_data = {
+    "Operational Tracking Layer": row_labels,
+    "Room Nights": [800, 1200, 950, 1450, 600, 1500],
+    "Revenue": [
+        114000.0 * currency_scale, 
+        180000.0 * currency_scale, 
+        161500.0 * currency_scale, 
+        246500.0 * currency_scale, 
+        108000.0 * currency_scale, 
+        270000.0 * currency_scale
+    ]
+}
+
+# Fix: Ensure the data framework handles state switches without hiding subsequent elements
+if "pacing_metrics_df" not in st.session_state or st.session_state.get("prev_currency_state") != selected_currency_key:
+    st.session_state.pacing_metrics_df = pd.DataFrame(default_pacing_data)
+    st.session_state.prev_currency_state = selected_currency_key
+
+edited_pace_df = st.data_editor(
+    st.session_state.pacing_metrics_df,
+    num_rows="fixed",
+    use_container_width=True,
+    key="pace_vs_forecast_editor"
+)
+st.session_state.pacing_metrics_df = edited_pace_df
+
+status_icons = []
+for i in range(3):
+    p_rn = edited_pace_df.iloc[i * 2]["Room Nights"]
+    f_rn = edited_pace_df.iloc[(i * 2) + 1]["Room Nights"]
+    if p_rn > 0 and f_rn > 0:
+        status_icons.append(f"**{months_list[i]}:** ✅ Entered & Logged")
+    else:
+        status_icons.append(f"**{months_list[i]}:** 📝 Awaiting Entry")
+
+st.markdown(f"**Metrics Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {status_icons[0]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[1]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[2]}")
+
+if st.button("🗑️ Clear Metrics Grid (Reset Sheet Values)"):
+    blank_pacing = {
+        "Operational Tracking Layer": row_labels,
+        "Room Nights": [0] * 6,
+        "Revenue": [0.0] * 6
+    }
+    st.session_state.pacing_metrics_df = pd.DataFrame(blank_pacing)
+    st.rerun()
+
+st.markdown("---")
+
+# --- 4. Month-by-Month Structured AI Revenue Diagnostics ---
+st.subheader("📈 Step 3: Month-by-Month RM Analysis & Agentic Safety Loop")
+
+is_salalah = city.lower().strip() == "salalah"
+has_valid_data_rendered = False
+
+for i in range(3):
+    m_name = months_list[i]
+    is_current_month = (i == 0)
+    
+    pace_row = edited_pace_df.iloc[i * 2]
+    fore_row = edited_pace_df.iloc[(i * 2) + 1]
+    
+    pace_rn, pace_rev = pace_row["Room Nights"], pace_row["Revenue"]
+    fore_rn, fore_rev = fore_row["Room Nights"], fore_row["Revenue"]
+    
+    if fore_rn > 0 and fore_rev > 0:
+        has_valid_data_rendered = True
+        forecast_adr = fore_rev / fore_rn
+        rn_capture_pct = (pace_rn / fore_rn) * 100
+        rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
+        
+        is_high
