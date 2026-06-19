@@ -39,13 +39,28 @@ st.markdown("---")
 
 # --- 1. Property Metadata & Global Currency Setup ---
 st.subheader("📍 Step 1: Define Property Profile & Currency Layer")
+
+# Reset Function for Step 1
+def clear_step_1_profile():
+    st.session_state["city_input"] = ""
+    st.session_state["country_input"] = ""
+    st.session_state["subject_hotel_input"] = ""
+    default_compset_rows = {
+        "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
+        "Hotel Identity Name": ["", "", "", "", "", "", "", ""]
+    }
+    st.session_state.compset_grid_df = pd.DataFrame(default_compset_rows)
+
+if st.button("🗑️ Reset Profile & Compset (Wipe Step 1 Data)"):
+    clear_step_1_profile()
+    st.rerun()
+
 col_m1, col_m2, col_m3 = st.columns(3)
 with col_m1:
-    city = st.text_input("Destination City / Market Location", value="Salalah")
+    city = st.text_input("Destination City / Market Location", value="Salalah", key="city_input")
 with col_m2:
-    country = st.text_input("Destination Country", value="Oman")
+    country = st.text_input("Destination Country", value="Oman", key="country_input")
 with col_m3:
-    # Expanded Comprehensive Multi-Region Currency Selector (Asian, Middle East, Europe)
     currency_options = {
         "USD ($) - United States Dollar": {"symbol": "$", "floor": 135.00, "factor": 1.0},
         "OMR (𐎱) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
@@ -81,7 +96,7 @@ if "compset_grid_df" not in st.session_state:
 
 col_prop1, col_prop2 = st.columns([1, 1])
 with col_prop1:
-    user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa")
+    user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa", key="subject_hotel_input")
 
 with col_prop2:
     st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
@@ -92,11 +107,17 @@ with col_prop2:
         key="compset_grid_editor"
     )
     st.session_state.compset_grid_df = edited_compset_grid
-    active_compset = [row["Hotel Identity Name"].strip() for _, row in edited_compset_grid.iterrows() if row["Hotel Identity Name"].strip()]
+    
+    # --- CRASH PROTECTION LAYER ---
+    # Safe filtration checking for type validity (handling string vs None mutations cleanly)
+    active_compset = []
+    for _, row in edited_compset_grid.iterrows():
+        val = row["Hotel Identity Name"]
+        if val is not None and str(val).strip() != "":
+            active_compset.append(str(val).strip())
     compset_count = len(active_compset)
 
-active_compset_check = [r["Hotel Identity Name"].strip() for _, r in st.session_state.compset_grid_df.iterrows() if r["Hotel Identity Name"].strip()]
-compset_verification = f"✅ {len(active_compset_check)} Competitor(s) Mapped" if active_compset_check else "📝 Awaiting Compset Entry"
+compset_verification = f"✅ {compset_count} Competitor(s) Mapped" if compset_count > 0 else "📝 Awaiting Compset Entry"
 location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
 hotel_verification = "✅ Hotel Name Saved" if user_hotel.strip() else "📝 Awaiting Hotel Name"
 
@@ -154,7 +175,7 @@ for i in range(3):
 
 st.markdown(f"**Metrics Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {status_icons[0]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[1]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[2]}")
 
-if st.button("🗑️ Clear Table Data (Reset Sheet Values)"):
+if st.button("🗑️ Clear Metrics Grid (Reset Sheet Values)"):
     blank_pacing = {
         "Operational Tracking Layer": row_labels,
         "Room Nights": [0] * 6,
@@ -237,7 +258,6 @@ for i in range(3):
                 st.write(f"*{demand_desc}*")
                 st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
                 
-                # Explicit explanation detailing source mechanics for strategic positioning
                 st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity indexes (MTD Actuals / On-The-Books Pickup curves) against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
                 
                 st.write(f"* **Target Forecast ADR Baseline:** {currency_symbol}{forecast_adr:.2f}")
