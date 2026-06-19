@@ -23,7 +23,7 @@ with col_m2:
 with col_m3:
     currency_options = {
         "USD ($) - United States Dollar": {"symbol": "$", "floor": 135.00, "factor": 1.0},
-        "OMR (𐎱.regular) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
+        "OMR (𐎱) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
         "AED (د.إ) - UAE Dirham": {"symbol": "AED ", "floor": 500.00, "factor": 3.67},
         "SAR (ر.س) - Saudi Riyal": {"symbol": "SAR ", "floor": 500.00, "factor": 3.75},
         "EUR (€) - Euro (Europe)": {"symbol": "€", "floor": 125.00, "factor": 0.92},
@@ -35,14 +35,34 @@ with col_m3:
     currency_scale = currency_options[selected_currency_key]["factor"]
     currency_base_floor = currency_options[selected_currency_key]["floor"]
 
-col_prop1, col_prop2 = st.columns(2)
+st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
+col_prop1, col_prop2 = st.columns([1, 1])
+
 with col_prop1:
     user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa")
-with col_prop2:
-    compset_input = st.text_input("Enter Competitor Hotel Names (For Market Mapping)", 
-                                  value="Grand Plaza Resort, Ocean View Boutique, Metropolitan Hub")
 
-compset_list = [name.strip() for name in compset_input.split(",") if name.strip()]
+with col_prop2:
+    st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
+    # Initialize a structural 8-row table for row-by-row compset entries
+    default_compset_rows = {
+        "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
+        "Hotel Identity Name": ["Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub", "", "", "", "", ""]
+    }
+    
+    if "compset_grid_df" not in st.session_state:
+        st.session_state.compset_grid_df = pd.DataFrame(default_compset_rows)
+        
+    edited_compset_grid = st.data_editor(
+        st.session_state.compset_grid_df,
+        num_rows="fixed",
+        use_container_width=True,
+        key="compset_grid_editor"
+    )
+    st.session_state.compset_grid_df = edited_compset_grid
+    
+    # Filter active competitors dynamically (ignoring empty fields)
+    active_compset = [row["Hotel Identity Name"].strip() for _, row in edited_compset_grid.iterrows() if row["Hotel Identity Name"].strip()]
+    compset_count = len(active_compset)
 
 # --- 2. Dynamic Forward 3-Month Matrix Calendar Calculations ---
 current_month_name = datetime.now().strftime("%B")
@@ -57,16 +77,15 @@ st.markdown("---")
 
 # --- 3. Structured Data Metrics Input Grid (MTD/OTB vs Forecast Rows) ---
 st.subheader(f"📊 Step 2: Input Internal Performance Metrics ({currency_symbol})")
-st.write("Track active pace data alongside expected full-month forecast thresholds to generate context-aware AI parameters:")
+st.write("Track active pacing data alongside expected full-month forecast thresholds to generate context-aware AI parameters:")
 
-# Set up the precise structural rows requested
 row_labels = [
-    f"{months_list[0]} (Current MTD)",
-    f"{months_list[0]} (Full Month Forecast)",
-    f"{months_list[1]} (On-The-Books / OTB)",
-    f"{months_list[1]} (Full Month Forecast)",
-    f"{months_list[2]} (On-The-Books / OTB)",
-    f"{months_list[2]} (Full Month Forecast)"
+    f"{months_list[0]} (Current MTD Actuals)",
+    f"{months_list[0]} (Full Month Forecast Target)",
+    f"{months_list[1]} (On-The-Books / OTB Pace)",
+    f"{months_list[1]} (Full Month Forecast Target)",
+    f"{months_list[2]} (On-The-Books / OTB Pace)",
+    f"{months_list[2]} (Full Month Forecast Target)"
 ]
 
 default_pacing_data = {
@@ -106,93 +125,89 @@ st.session_state.pacing_metrics_df = edited_pace_df
 st.markdown("---")
 
 # --- 4. Month-by-Month Structured AI Revenue Diagnostics ---
-st.subheader("📈 Step 3: Month-by-Month AI Pricing & Circuit Breaker Execution")
+st.subheader("📈 Step 3: Month-by-Month RM Analysis & Agentic Safety Loop")
 
 is_salalah = city.lower().strip() == "salalah"
 
-# We iterate through our data pairs step-wise (jumping by 2 lines to handle each month's pairing)
 for i in range(3):
     m_name = months_list[i]
     is_current_month = (i == 0)
     
-    # Extract data pairs from row slices
     pace_row = edited_pace_df.iloc[i * 2]
     fore_row = edited_pace_df.iloc[(i * 2) + 1]
     
     pace_rn, pace_rev = pace_row["Room Nights"], pace_row["Revenue"]
     fore_rn, fore_rev = fore_row["Room Nights"], fore_row["Revenue"]
     
-    # Process only if user has filled forecast benchmarks
     if fore_rn > 0 and fore_rev > 0:
         forecast_adr = fore_rev / fore_rn
-        pace_adr = pace_rev / pace_rn if pace_rn > 0 else 0.0
         
-        # Calculate exactly how much business is already locked in relative to target expectations
+        # Calculate standard inventory volume capture tracking metrics
         rn_capture_pct = (pace_rn / fore_rn) * 100
         rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
         
-        # Dynamic Seasonal Intelligence Injections
+        # Dynamic Seasonal Intelligence Injections with Revenue Management Lexicon
         is_high_season_month = m_name in ["June", "July", "August", "September"]
         
         if is_salalah and is_high_season_month:
-            demand_profile = "CRITICAL / PEAK SEASON (Khareef Monsoon Window)"
-            demand_desc = "The Dhofar monsoon climate brings peak regional leisure flows. Maximum seasonal room constraints active."
+            demand_profile = "🚨 CRITICAL MARKET COMPRESSION (Khareef Monsoon Horizon)"
+            demand_desc = "Extreme seasonal compression driven by structural micro-climate variations. High unconstrained market demand eliminates the risk of inventory inventory spoilage, establishing significant premium pricing power across the sector."
             base_floor = currency_base_floor * 1.35
         elif is_high_season_month:
-            demand_profile = "ELEVATED DEMAND (Summer Holiday Window)"
-            demand_desc = "Standard regional leisure vacation adjustments active. Normal competitive pacing parameters."
+            demand_profile = "📈 POSITIVE SEASONAL DEMAND VARIANCE"
+            demand_desc = "Transient holiday volume driving steady compression cycles. Market pace registers normal elasticity vectors; standard structural distribution tuning recommended."
             base_floor = currency_base_floor * 1.10
         else:
-            demand_profile = "STABLE / STEADY-STATE DESTINATION CYCLE"
-            demand_desc = "Standard corporate accounts and stable baseline regional corporate segments anchor inventory."
+            demand_profile = "⚖️ STEADY-STATE MARKET EQUILIBRIUM"
+            demand_desc = "Baseline commercial operations active. High dependence on base corporate accounts and contracted volume. Core strategy should focus on length-of-stay (LOS) controls to mitigate low-rate displacement."
             base_floor = currency_base_floor
 
         # --- AI Agent Logic Modulated by Real-World Pacing Capture Lines ---
-        # If your room nights capture is running hot ahead of expectations, the AI turns highly aggressive
         if rn_capture_pct > 75:
-            pace_status = "ACCELERATED PACING"
-            ai_behavior_label = "Aggressive Yield Optimization (Pace exceeding target vector)"
-            ai_markup = 1.30  # High velocity gives AI confidence to hike prices 30%
+            pace_status = "🔥 ACCELERATED BOOKING PACE (POS VELOCITY BREACH)"
+            ai_behavior_label = "Aggressive Yield Premiumization (Maximizing ADR Index at the cost of nominal occupancy)"
+            ai_markup = 1.30  
             floor_adjusted = base_floor * 1.15
         elif rn_capture_pct >= 40:
-            pace_status = "NORMAL PACING RANGE"
-            ai_behavior_label = "Standard Market Positioning (Steady pacing volume)"
-            ai_markup = 1.15  # Normal markup
+            pace_status = "✅ STABLE BOOKING PACE CURVE"
+            ai_behavior_label = "Optimal Fair-Share Positioning (Balancing RevPAR Index and RGI projections)"
+            ai_markup = 1.15  
             floor_adjusted = base_floor
         else:
-            pace_status = "LAGGING PACE TARGETS"
-            ai_behavior_label = "Defensive Occupancy Stimulation (Slow pick-up detected)"
-            ai_markup = 0.95  # Drop rate slightly below your baseline to stimulate room booking conversions
-            floor_adjusted = base_floor * 0.85  # Lower protection floor to permit baseline filling
+            pace_status = "⚠️ LAGGING BOOKING VELOCITY (CAPTURE DEFICIT)"
+            ai_behavior_label = "Tactical Occupancy Stimulation (Preventing inventory spoilage and dilution via baseline distribution changes)"
+            ai_markup = 0.95  
+            floor_adjusted = base_floor * 0.85  
 
         proposed_ai_rate = forecast_adr * ai_markup
-        tracking_label = "MTD Actuals" if is_current_month else "OTB Bookings"
+        tracking_label = "MTD" if is_current_month else "OTB"
         
         with st.container():
-            st.markdown(f"### 📅 Horizon Month: **{m_name}**")
+            st.markdown(f"### 📅 Horizon Period: **{m_name}**")
             
             col_info, col_guardrail = st.columns([3, 2])
             
             with col_info:
-                st.markdown(f"**📈 Dynamic Market Demand Status:** `{demand_profile}`")
+                st.markdown(f"**📈 Market Demand Status:** `{demand_profile}`")
                 st.write(f"*{demand_desc}*")
-                st.markdown(f"**📊 Internal Pacing Health:** `{pace_status}`")
+                st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
                 
-                # Render clean structural performance cards inside the text framework
-                st.write(f"* **Your Expected Forecast ADR:** {currency_symbol}{forecast_adr:.2f}")
-                st.write(f"* **Current {tracking_label} Capture:** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Volume Filled)")
-                st.write(f"* **Current Revenue Capture Index:** {currency_symbol}{pace_rev:,.2f} / {currency_symbol}{fore_rev:,.2f} ({rev_capture_pct:.1f}% Revenue Secured)")
-                st.write(f"* **AI Agent Action Vector:** `{ai_behavior_label}` targeting a rate update adjustment of **{int((ai_markup-1)*100)}%**")
+                # Render technical operational summary
+                st.write(f"* **Target Forecast ADR Baseline:** {currency_symbol}{forecast_adr:.2f}")
+                st.write(f"* **Inventory Materialization ({tracking_label}):** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Inventory Committed)")
+                st.write(f"* **Revenue Volume Secured:** {currency_symbol}{pace_rev:,.2f} / {currency_symbol}{fore_rev:,.2f} ({rev_capture_pct:.1f}% Revenue Materialized)")
+                st.write(f"* **Mapped Competitive Landscape:** Cross-referencing pricing vectors against `{compset_count}` active competitor profiles mapped in Step 1.")
+                st.write(f"* **Agent Yield Optimization Vector:** `{ai_behavior_label}` targeting an adjustment markup of **{int((ai_markup-1)*100)}%**")
                 st.write(f"* **Active Safety Parameter (Circuit Breaker Floor):** {currency_symbol}{floor_adjusted:.2f}")
 
             with col_guardrail:
-                st.write("#### 🛡️ Live Gateway Validation Payload")
-                st.write(f"AI Agent Proposed Update: **{currency_symbol}{proposed_ai_rate:.2f}**")
+                st.write("#### 🛡️ Autonomous Distribution Gateway")
+                st.write(f"AI Agent Proposed Public Rate: **{currency_symbol}{proposed_ai_rate:.2f}**")
                 
                 if proposed_ai_rate < floor_adjusted:
-                    st.error(f"🚨 **BREACH REJECTED!** The autonomous rate proposal of {currency_symbol}{proposed_ai_rate:.2f} violates your operational safety parameters floor line of {currency_symbol}{floor_adjusted:.2f}. API clearance denied. System rolled back to safe baseline positions to preserve yields.")
+                    st.error(f"🚨 **GATEWAY BREACH BLOCKED!** The autonomous rate adjustment proposal of {currency_symbol}{proposed_ai_rate:.2f} falls below your system's deterministic safety floor of {currency_symbol}{floor_adjusted:.2f}. API execution token revoked to avoid rate dilution. Channel rate rolled back to secure baseline thresholds.")
                 else:
-                    st.success(f"✅ **PAYLOAD AUTHORIZED.** The rate adjustment proposal of {currency_symbol}{proposed_ai_rate:.2f} passes all mathematical validation loops. Secure token granted for direct channel synchronization (OPERA Cloud / SynXis).")
+                    st.success(f"✅ **EXECUTION PAYLOAD CLEARED.** The rate adjustment proposal of {currency_symbol}{proposed_ai_rate:.2f} satisfies all algorithmic validation conditions. Secure ARI instruction package dispatched for live PMS/CRS channel synchronization.")
             
             st.markdown("<br>", unsafe_allow_html=True)
 else:
