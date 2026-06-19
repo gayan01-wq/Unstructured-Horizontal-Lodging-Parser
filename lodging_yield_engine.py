@@ -1,138 +1,116 @@
+import streamlit as st
 import pandas as pd
-import numpy as np
-import os
-from google.colab import files
-from IPython.display import HTML, display
-import openpyxl
-from openpyxl.chart import BarChart, LineChart, Reference
 
-def run_wyndham_ultimate_compset_comparison_engine():
-    HOTEL_NAME = "Wyndham Garden Salalah Mirbat"
-    MY_INVENTORY = 237  
-    
-    COMPSET_CAPACITIES = {
-        "Millennium Resort Salalah": 285,
-        "Salalah Rotana Resort": 422,
-        "Intercity Hotel Salalah": 70,
-        "Salalah Gardens Hotel": 168,
-        "Crowne Plaza Resort Salalah": 153,
-        "Alila Hinu Bay Salalah": 112
-    }
-    TOTAL_MARKET_KEYS = sum(COMPSET_CAPACITIES.values()) + MY_INVENTORY
-    
-    revenue_inputs = {
-        "Jun 2026": {"days": 30, "sold": 176, "rev": 2555, "market_occ": 25.0},
-        "Jul 2026": {"days": 31, "sold": 680, "rev": 26876, "market_occ": 18.0},
-        "Aug 2026": {"days": 31, "sold": 1950, "rev": 74100, "market_occ": 32.0}
-    }
-    
-    processed_rows = []
-    
-    for period, data in revenue_inputs.items():
-        days = data["days"]
-        my_capacity = MY_INVENTORY * days
-        my_occ = (data["sold"] / my_capacity) * 100
-        adr = data["rev"] / data["sold"] if data["sold"] > 0 else 0.0
-        
-        market_capacity_pool = TOTAL_MARKET_KEYS * days
-        fair_share_target = (market_capacity_pool * (data["market_occ"] / 100)) * (my_capacity / market_capacity_pool)
-        variance = data["sold"] - fair_share_target
-        
-        if adr > 39.0 and my_occ < 15.0:
-            yield_friction = "HIGH FRICTION (Rate is choking booking velocity; market resistance met)"
-        elif adr > 35.0 and my_occ >= 30.0:
-            yield_friction = "YIELD SWEET-SPOT (Premium pricing accepted by market; maximum capture)"
-        else:
-            yield_friction = "LOW FRICTION (Soft rate structure; rooms are filling with zero market resistance)"
-        
-        processed_rows.append({
-            "Period": period,
-            "Wyndham Occ %": round(my_occ, 1),
-            "Market Occ %": round(data["market_occ"], 1),
-            "Fair Share Target (Rooms)": round(fair_share_target, 0),
-            "Actual Captured (Rooms)": data["sold"],
-            "Market Share Variance": round(variance, 0),
-            "ADR (OMR)": round(adr, 2),
-            "Yield Friction Index": yield_friction
-        })
-        
-    df_output = pd.DataFrame(processed_rows)
-    output_filename = "Wyndham_Final_Compset_Comparison_Report.xlsx"
-    
-    if os.path.exists(output_filename):
-        os.remove(output_filename)
-        
-    # =========================================================================
-    # 📂 BUILD THE EXCEL WORKBOOK WITH SIDE-BY-SIDE COMPSET BARS
-    # =========================================================================
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Executive Performance"
-    ws.views.sheetView[0].showGridLines = True
-    
-    headers = list(df_output.columns)
-    ws.append(headers)
-    for index, row in df_output.iterrows():
-        ws.append(list(row))
-        
-    for col in ws.columns:
-        max_len = max(len(str(cell.value or '')) for cell in col)
-        col_letter = openpyxl.utils.get_column_letter(col[0].column)
-        ws.column_dimensions[col_letter].width = max(max_len + 4, 15)
-        
-    # 1. Primary Bar Chart: Compare Fair Share vs Actual Captured side-by-side
-    chart1 = BarChart()
-    chart1.type = "col"
-    chart1.style = 10  
-    chart1.title = "Wyndham Actual Bookings vs Market Fair Share Baseline"
-    chart1.y_axis.title = "Room Nights"
-    chart1.x_axis.title = "Period"
-    
-    # Select Columns D & E (Fair Share Target & Actual Captured)
-    volume_data = Reference(ws, min_col=4, min_row=1, max_col=5, max_row=4)
-    cats = Reference(ws, min_col=1, min_row=2, max_row=4)
-    chart1.add_data(volume_data, titles_from_data=True)
-    chart1.set_categories(cats)
-    
-    # 2. Secondary Line Chart: ADR Price Curve
-    chart2 = LineChart()
-    adr_data = Reference(ws, min_col=7, min_row=1, max_row=4)
-    chart2.add_data(adr_data, titles_from_data=True)
-    
-    chart2.y_axis.axId = 200
-    chart2.y_axis.title = "ADR (OMR)"
-    chart2.y_axis.crosses = "max"
-    
-    # Color the line chart Crimson Red
-    s2 = chart2.series[0]
-    s2.graphicalProperties.line.solidFill = "D93025"
-    s2.graphicalProperties.line.width = 35000         
-    
-    # Combine charts
-    chart1 += chart2
-    
-    chart1.height = 14
-    chart1.width = 20
-    ws.add_chart(chart1, "A8")  
-    
-    # Compset Setup Tab
-    ws2 = wb.create_sheet(title="Calibrated Market Supply")
-    ws2.append(["Compset Hotel Name", "Physical Rooms Base"])
-    for hotel, inventory in COMPSET_CAPACITIES.items():
-        ws2.append([hotel, inventory])
-    ws2.column_dimensions['A'].width = 30
-    ws2.column_dimensions['B'].width = 22
-    
-    wb.save(output_filename)
-    
-    print("\n" + "="*85)
-    print(f"🎉 EXCEL GENERATED WITH SIDE-BY-SIDE COMPSET VISUAL COMPARISON!")
-    print("="*85)
-    
-    link_html = f'<a href="/files/{output_filename}" download="{output_filename}" style="font-size:15px; font-weight:bold; color:#ffffff; background-color:#1a73e8; padding:12px 24px; border-radius:4px; text-decoration:none; display:inline-block; margin-top:10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">➔ Download Final Presentation Report</a>'
-    display(HTML(link_html))
-    
-    try: files.download(output_filename)
-    except: pass
+# Set up page configurations
+st.set_page_config(page_title="Autonomous Revenue Intelligence Lab", layout="wide")
 
-run_wyndham_ultimate_compset_comparison_engine()
+st.title("🏨 Autonomous Revenue Guardrail Lab")
+st.markdown("""
+### Multi-User Hospitality Performance & Safety Matrix
+*An open-source blueprint for verifying autonomous AI pricing decisions against deterministic operational guardrails.*
+""")
+
+# --- 1. Global Inputs (City & Country) ---
+col_meta1, col_meta2 = st.columns(2)
+with col_meta1:
+    city = st.text_input("📍 Destination City / Market Location", value="Salalah")
+with col_meta2:
+    country = st.text_input("🌍 Destination Country", value="Oman")
+
+st.markdown("---")
+
+# --- 2. Session State Setup for Multi-User / Clear Data Stability ---
+# We use standard dictionary templates to prevent multi-user session state conflicts on Streamlit Cloud
+default_data = {
+    "Hotel Name": ["My Property (Subject)", "Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub"],
+    "3-Month Room Nights": [1200, 1450, 980, 1100],
+    "3-Month Revenue ($)": [180000.0, 246500.0, 176400.0, 143000.0]
+}
+
+if "market_data" not in st.session_state:
+    st.session_state.market_data = pd.DataFrame(default_data)
+
+# --- 3. Interactive Data Table ---
+st.subheader("📊 Step 1: Input Comp Set Performance Data")
+st.write(f"Adjust values below to calculate fair market shares for **{city}, {country}**:")
+
+# Clear Data Action Function
+def clear_table():
+    blank_data = {
+        "Hotel Name": ["My Property (Subject)", "", "", ""],
+        "3-Month Room Nights": [0, 0, 0, 0],
+        "3-Month Revenue ($)": [0.0, 0.0, 0.0, 0.0]
+    }
+    st.session_state.market_data = pd.DataFrame(blank_data)
+
+# Clear Data Button UI Elements
+if st.button("🗑️ Clear Table Data (Reset for your Hotel)"):
+    clear_table()
+    st.rerun()
+
+# Render the interactive grid safely isolated inside session state
+edited_df = st.data_editor(
+    st.session_state.market_data, 
+    num_rows="dynamic", 
+    use_container_width=True,
+    key="editor_grid"
+)
+# Update session storage silently as they modify cells
+st.session_state.market_data = edited_df
+
+st.markdown("---")
+
+# --- 4. Live Commercial Intelligence Engine Math ---
+st.subheader("📈 Step 2: Live Engine Outputs & Revenue Metrics")
+
+# Prevent zero division errors if user clears out data entirely
+total_nights = edited_df["3-Month Room Nights"].sum()
+total_rev = edited_df["3-Month Revenue ($)"].sum()
+
+if total_nights > 0 and total_rev > 0:
+    # Basic ADR calculations
+    edited_df["Calculated ADR ($)"] = edited_df["3-Month Revenue ($)"] / edited_df["3-Month Room Nights"]
+    edited_df["Calculated ADR ($)"] = edited_df["Calculated ADR ($)"].fillna(0.0)
+    
+    market_avg_adr = total_rev / total_nights
+    subject_hotel = edited_df.iloc[0]
+    subject_adr = subject_hotel["Calculated ADR ($)"] if subject_hotel["3-Month Room Nights"] > 0 else 0.0
+    
+    # Calculate Market Share Percentages
+    edited_df["Room Night Share (%)"] = (edited_df["3-Month Room Nights"] / total_nights) * 100
+    edited_df["Revenue Share (%)"] = (edited_df["3-Month Revenue ($)"] / total_rev) * 100
+
+    # Display the processed summary framework to the user
+    st.dataframe(
+        edited_df[["Hotel Name", "Calculated ADR ($)", "Room Night Share (%)", "Revenue Share (%)"]], 
+        use_container_width=True
+    )
+
+    # Core high-level cards
+    c1, c2, c3 = st.columns(3)
+    with c1:
+        st.metric(label="Market Average ADR", value=f"${market_avg_adr:.2f}")
+    with c2:
+        st.metric(label="Your Property ADR", value=f"${subject_adr:.2f}")
+    with c3:
+        st.metric(label="Your Market Revenue Share", value=f"{edited_df.iloc[0]['Revenue Share (%)']:.1f}%")
+
+    # --- 5. The Agentic Safety Loop (The Value Proposition) ---
+    st.markdown("---")
+    st.subheader("🤖 Step 3: Autonomous Pricing & Agentic Guardrail Execution")
+    
+    # Simulate an AI agent attempting to optimize next month's rate aggressively
+    proposed_agent_rate = market_avg_adr * 1.15 
+    
+    # Define a strict, hardcoded revenue safety floor boundary line
+    DETERMINISTIC_SAFETY_FLOOR = 135.00
+    
+    st.write(f"**Scenario Simulator:** An autonomous pricing agent reads your market matrix for **{city}** and proposes an automated rack rate adjustment to **${proposed_agent_rate:.2f}**.")
+    
+    if proposed_agent_rate < DETERMINISTIC_SAFETY_FLOOR:
+        st.error(f"🚨 **Circuit Breaker Status: BREACH BLOCKED!** The AI agent's optimization rate of ${proposed_agent_rate:.2f} falls below your system's absolute floor parameter of ${DETERMINISTIC_SAFETY_FLOOR:.2f}. Execution tokens revoked. System rolled back to safe baseline.")
+    else:
+        st.success(f"✅ **Circuit Breaker Status: SECURE / APPROVED.** Proposed rate of ${proposed_agent_rate:.2f} passes all mathematical safety loops. Authorized to stream directly to distribution APIs (SynXis/OPERA Cloud).")
+
+else:
+    st.info("💡 Please enter hotel names, room nights, and revenue values into the table above to compute live revenue management metrics.")
