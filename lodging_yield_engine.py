@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 from datetime import datetime
+import calendar
 
 # Page configuration setup
 st.set_page_config(page_title="Autonomous Revenue Intelligence Lab", layout="wide")
@@ -38,13 +39,14 @@ st.markdown("""
 st.markdown("---")
 
 # --- 1. Property Metadata & Global Currency Setup ---
-st.subheader("📍 Step 1: Define Property Profile & Currency Layer")
+st.subheader("📍 Step 1: Define Property Profile & Capacity Inventory")
 
 # Reset Function for Step 1
 def clear_step_1_profile():
     st.session_state["city_input"] = ""
     st.session_state["country_input"] = ""
     st.session_state["subject_hotel_input"] = ""
+    st.session_state["total_rooms_input"] = 150
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
         "Hotel Identity Name": ["", "", "", "", "", "", "", ""],
@@ -88,7 +90,6 @@ with col_m3:
 
 st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
 
-# Fixed: Ensure default structure explicitly contains the identical rate dictionary key on init
 if "compset_grid_df" not in st.session_state:
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
@@ -100,6 +101,8 @@ if "compset_grid_df" not in st.session_state:
 col_prop1, col_prop2 = st.columns([1, 1.2])
 with col_prop1:
     user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa", key="subject_hotel_input")
+    # Added capacity anchor
+    total_rooms = st.number_input("Total Physical Room Inventory Capacity", min_value=1, value=150, step=1, key="total_rooms_input")
 
 with col_prop2:
     st.write("📋 **Map Competitive Set Names & Current Market Pricing:**")
@@ -132,18 +135,25 @@ with col_prop2:
 
 compset_verification = f"✅ {compset_count} Competitor(s) Mapped" if compset_count > 0 else "📝 Awaiting Compset Entry"
 location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
-hotel_verification = "✅ Hotel Name Saved" if user_hotel.strip() else "📝 Awaiting Hotel Name"
+hotel_verification = f"✅ Saved ({total_rooms} Rooms)" if user_hotel.strip() else "📝 Awaiting Hotel Name"
 
 st.markdown(f"**Profile Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {location_verification} &nbsp;&nbsp;|&nbsp;&nbsp; {hotel_verification} &nbsp;&nbsp;|&nbsp;&nbsp; {compset_verification}")
 
 # --- 2. Dynamic Forward 3-Month Matrix Calendar Calculations ---
-current_month_name = datetime.now().strftime("%B")
-months_list = [current_month_name]
-current_month_num = datetime.now().month
+current_datetime = datetime.now()
+months_data = [] # List of dicts storing month names, numbers, years, and days in month
+current_month_num = current_datetime.month
+current_year = current_datetime.year
 
-for i in range(1, 3):
-    future_month = datetime(2026, ((current_month_num + i - 1) % 12) + 1, 1)
-    months_list.append(future_month.strftime("%B"))
+for i in range(3):
+    m_num = ((current_month_num + i - 1) % 12) + 1
+    # Adjust year if it wraps past December
+    m_year = current_year + 1 if (current_month_num + i > 12) else current_year
+    m_name = datetime(m_year, m_num, 1).strftime("%B")
+    days_in_m = calendar.monthrange(m_year, m_num)[1]
+    months_data.append({"name": m_name, "num": m_num, "year": m_year, "days": days_in_m})
+
+months_list = [m["name"] for m in months_data]
 
 st.markdown("---")
 
@@ -214,7 +224,9 @@ is_salalah = city.lower().strip() == "salalah"
 has_valid_data_rendered = False
 
 for i in range(3):
-    m_name = months_list[i]
+    m_info = months_data[i]
+    m_name = m_info["name"]
+    days_in_month = m_info["days"]
     is_current_month = (i == 0)
     
     pace_row = edited_pace_df.iloc[i * 2]
@@ -226,9 +238,15 @@ for i in range(3):
     if fore_rn > 0 and fore_rev > 0:
         has_valid_data_rendered = True
         
+        # Calculate dynamic KPIs
         forecast_adr = fore_rev / fore_rn
         rn_capture_pct = (pace_rn / fore_rn) * 100
         rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
+        
+        # CALCULATE TRUE PROJECTED FULL MONTH OCCUPANCY RATE
+        total_available_capacity = total_rooms * days_in_month
+        projected_occ_pct = (fore_rn / total_available_capacity) * 100
+        pace_occ_pct = (pace_rn / total_available_capacity) * 100
         
         is_high_season_month = m_name in ["June", "July", "August", "September"]
         
@@ -278,8 +296,11 @@ for i in range(3):
                 st.markdown(f"**📈 Market Demand Status:** `{demand_profile}`")
                 st.write(f"*{demand_desc}*")
                 st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
-                st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity indexes (MTD Actuals / On-The-Books Pickup curves) against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
+                st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity matrix variables against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
+                
+                # Dynamic Capacity and Pricing Metrics Display Row
                 st.write(f"* **Target Forecast ADR Baseline (Calculated):** {currency_symbol}{forecast_adr:.2f}")
+                st.write(f"* **Projected Capacity Occupancy:** `{projected_occ_pct:.1f}% Full Month Occupancy` (Active Pacing: {pace_occ_pct:.1f}%)")
                 st.write(f"* **Inventory Materialization ({tracking_label}):** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Inventory Committed)")
                 st.write(f"* **Revenue Volume Secured:** {currency_symbol}{pace_rev:,.2f} / {currency_symbol}{fore_rev:,.2f} ({rev_capture_pct:.1f}% Revenue Materialized)")
                 st.write(f"* **Competitive Landscape Index (ARI):** Proposed strategy positions property at an ARI Index of `{ari_string}` against mapped compset benchmarks.")
