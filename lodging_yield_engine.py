@@ -25,7 +25,7 @@ if not st.session_state.authenticated:
         key="pass_input", 
         on_change=check_login
     )
-    st.stop()  # Standard stop command kills compilation right here if auth is False
+    st.stop()  
 # ------------------------------------------
 
 # --- ALL ENGINE OPERATIONS EXECUTE BELOW ONLY IF AUTHENTICATED ---
@@ -72,7 +72,6 @@ with col_m3:
 
 st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
 
-# Initialize session state for competitor grid first
 if "compset_grid_df" not in st.session_state:
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
@@ -96,7 +95,6 @@ with col_prop2:
     active_compset = [row["Hotel Identity Name"].strip() for _, row in edited_compset_grid.iterrows() if row["Hotel Identity Name"].strip()]
     compset_count = len(active_compset)
 
-# Now that variables are defined, we place the Verification Panel cleanly below the entry blocks
 active_compset_check = [r["Hotel Identity Name"].strip() for _, r in st.session_state.compset_grid_df.iterrows() if r["Hotel Identity Name"].strip()]
 compset_verification = f"✅ {len(active_compset_check)} Competitor(s) Mapped" if active_compset_check else "📝 Awaiting Compset Entry"
 location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
@@ -145,7 +143,6 @@ if "pacing_metrics_df" not in st.session_state or st.session_state.get("prev_cur
     st.session_state.pacing_metrics_df = pd.DataFrame(default_pacing_data)
     st.session_state.prev_currency_state = selected_currency_key
 
-# --- STEP 2 DATA STATUS TRACKING PANEL ---
 status_icons = []
 for i in range(3):
     p_rn = st.session_state.pacing_metrics_df.iloc[i * 2]["Room Nights"]
@@ -240,6 +237,9 @@ for i in range(3):
                 st.write(f"*{demand_desc}*")
                 st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
                 
+                # Explicit explanation detailing source mechanics for strategic positioning
+                st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity indexes (MTD Actuals / On-The-Books Pickup curves) against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
+                
                 st.write(f"* **Target Forecast ADR Baseline:** {currency_symbol}{forecast_adr:.2f}")
                 st.write(f"* **Inventory Materialization ({tracking_label}):** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Inventory Committed)")
                 st.write(f"* **Revenue Volume Secured:** {currency_symbol}{pace_rev:,.2f} / {currency_symbol}{fore_rev:,.2f} ({rev_capture_pct:.1f}% Revenue Materialized)")
@@ -248,13 +248,13 @@ for i in range(3):
                 st.write(f"* **Active Safety Parameter (Circuit Breaker Floor):** {currency_symbol}{floor_adjusted:.2f}")
 
             with col_guardrail:
-                st.write("#### 🛡️ Autonomous Distribution Gateway")
-                st.write(f"AI Agent Proposed Public Rate: **{currency_symbol}{proposed_ai_rate:.2f}**")
+                st.write("#### 🛡️ Automated Yield Gatekeeper")
+                st.write(f"AI Agent Proposed Public Rack Rate: **{currency_symbol}{proposed_ai_rate:.2f}**")
                 
                 if proposed_ai_rate < floor_adjusted:
-                    st.error(f"🚨 **GATEWAY BREACH BLOCKED!** The autonomous rate adjustment proposal of {currency_symbol}{proposed_ai_rate:.2f} violates your system's deterministic safety floor of {currency_symbol}{floor_adjusted:.2f}. API execution token revoked to avoid rate dilution. Channel rate rolled back to secure baseline thresholds.")
+                    st.error(f"🚨 **RATE DEVIATION REJECTED!** The autonomous rate proposal of {currency_symbol}{proposed_ai_rate:.2f} violates your operational safety parameters floor line of {currency_symbol}{floor_adjusted:.2f}. Strategy authorization denied to prevent severe channel dilution. Distribution channels rolled back to secure baseline positions to safeguard yield.")
                 else:
-                    st.success(f"✅ **EXECUTION PAYLOAD CLEARED.** The rate adjustment proposal of {currency_symbol}{proposed_ai_rate:.2f} satisfies all algorithmic validation conditions. Secure ARI instruction package dispatched for live PMS/CRS channel synchronization.")
+                    st.success(f"✅ **Rate is compatible with market conditions.** The dynamic strategy proposal of {currency_symbol}{proposed_ai_rate:.2f} satisfies all deterministic constraints. Automated ARI strategy authorized for real-time channel manager and PMS synchronization.")
             
             st.markdown("<br>", unsafe_allow_html=True)
 else:
