@@ -21,6 +21,7 @@ with col_m1:
 with col_m2:
     country = st.text_input("Destination Country", value="Oman")
 with col_m3:
+    # Expanded Comprehensive Multi-Region Currency Selector (Asian, Middle East, Europe)
     currency_options = {
         "USD ($) - United States Dollar": {"symbol": "$", "floor": 135.00, "factor": 1.0},
         "OMR (𐎱) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
@@ -47,7 +48,7 @@ with col_m3:
 
 st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
 
-# --- STEP 1 LIVE VERIFICATION SCANNER (FIXED SYNTAX) ---
+# --- STEP 1 LIVE VERIFICATION SCANNER ---
 if "compset_grid_df" not in st.session_state:
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
@@ -68,20 +69,4 @@ with col_prop1:
 
 with col_prop2:
     st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
-    edited_compset_grid = st.data_editor(
-        st.session_state.compset_grid_df,
-        num_rows="fixed",
-        use_container_width=True,
-        key="compset_grid_editor"
-    )
-    st.session_state.compset_grid_df = edited_compset_grid
-    active_compset = [row["Hotel Identity Name"].strip() for _, row in edited_compset_grid.iterrows() if row["Hotel Identity Name"].strip()]
-    compset_count = len(active_compset)
-
-# --- 2. Dynamic Forward 3-Month Matrix Calendar Calculations ---
-current_month_name = datetime.now().strftime("%B")
-months_list = [current_month_name]
-current_month_num = datetime.now().month
-
-for i in range(1, 3):
-    future_month = datetime(2026, (current_month_num + i - 1) % 12
+    edited_
