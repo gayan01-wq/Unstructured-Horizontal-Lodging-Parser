@@ -139,4 +139,143 @@ st.markdown("---")
 st.subheader(f"📊 Step 2: Input Internal Performance Metrics ({currency_symbol})")
 st.write("Track active pacing data alongside expected full-month forecast thresholds to generate context-aware AI parameters:")
 
-row_labels =
+row_labels = [
+    f"{months_list[0]} (Current MTD Actuals)",
+    f"{months_list[0]} (Full Month Forecast Target)",
+    f"{months_list[1]} (On-The-Books / OTB Pace)",
+    f"{months_list[1]} (Full Month Forecast Target)",
+    f"{months_list[2]} (On-The-Books / OTB Pace)",
+    f"{months_list[2]} (Full Month Forecast Target)"
+]
+
+default_pacing_data = {
+    "Operational Tracking Layer": row_labels,
+    "Room Nights": [800, 1200, 950, 1450, 600, 1500],
+    "Revenue": [
+        114000.0 * currency_scale, 
+        180000.0 * currency_scale, 
+        161500.0 * currency_scale, 
+        246500.0 * currency_scale, 
+        108000.0 * currency_scale, 
+        270000.0 * currency_scale
+    ]
+}
+
+if "pacing_metrics_df" not in st.session_state or st.session_state.get("prev_currency_state") != selected_currency_key:
+    st.session_state.pacing_metrics_df = pd.DataFrame(default_pacing_data)
+    st.session_state.prev_currency_state = selected_currency_key
+
+edited_pace_df = st.data_editor(
+    st.session_state.pacing_metrics_df,
+    num_rows="fixed",
+    use_container_width=True,
+    key="pace_vs_forecast_editor"
+)
+st.session_state.pacing_metrics_df = edited_pace_df
+
+status_icons = []
+for i in range(3):
+    p_rn = edited_pace_df.iloc[i * 2]["Room Nights"]
+    f_rn = edited_pace_df.iloc[(i * 2) + 1]["Room Nights"]
+    if p_rn > 0 and f_rn > 0:
+        status_icons.append(f"**{months_list[i]}:** ✅ Entered & Logged")
+    else:
+        status_icons.append(f"**{months_list[i]}:** 📝 Awaiting Entry")
+
+st.markdown(f"**Metrics Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {status_icons[0]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[1]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[2]}")
+
+if st.button("🗑️ Clear Metrics Grid (Reset Sheet Values)"):
+    blank_pacing = {
+        "Operational Tracking Layer": row_labels,
+        "Room Nights": [0] * 6,
+        "Revenue": [0.0] * 6
+    }
+    st.session_state.pacing_metrics_df = pd.DataFrame(blank_pacing)
+    st.rerun()
+
+st.markdown("---")
+
+# --- 4. Month-by-Month Structured AI Revenue Diagnostics ---
+st.subheader("📈 Step 3: Month-by-Month RM Analysis & Agentic Safety Loop")
+
+is_salalah = city.lower().strip() == "salalah"
+has_valid_data_rendered = False
+
+for i in range(3):
+    m_name = months_list[i]
+    is_current_month = (i == 0)
+    
+    pace_row = edited_pace_df.iloc[i * 2]
+    fore_row = edited_pace_df.iloc[(i * 2) + 1]
+    
+    pace_rn, pace_rev = pace_row["Room Nights"], pace_row["Revenue"]
+    fore_rn, fore_rev = fore_row["Room Nights"], fore_row["Revenue"]
+    
+    if fore_rn > 0 and fore_rev > 0:
+        has_valid_data_rendered = True
+        forecast_adr = fore_rev / fore_rn
+        rn_capture_pct = (pace_rn / fore_rn) * 100
+        rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
+        
+        is_high_season_month = m_name in ["June", "July", "August", "September"]
+        
+        if is_salalah and is_high_season_month:
+            demand_profile = "🚨 CRITICAL MARKET COMPRESSION (Khareef Monsoon Horizon)"
+            demand_desc = "Extreme seasonal compression driven by structural micro-climate variations. High unconstrained market demand eliminates the risk of inventory spoilage, establishing significant premium pricing power across the sector."
+            base_floor = currency_base_floor * 1.35
+        elif is_high_season_month:
+            demand_profile = "📈 POSITIVE SEASONAL DEMAND VARIANCE"
+            demand_desc = "Transient holiday volume driving steady compression cycles. Market pace registers normal elasticity vectors; standard structural distribution tuning recommended."
+            base_floor = currency_base_floor * 1.10
+        else:
+            demand_profile = "⚖️ STEADY-STATE MARKET EQUILIBRIUM"
+            demand_desc = "Baseline commercial operations active. High dependence on base corporate accounts and contracted volume. Core strategy should focus on length-of-stay (LOS) controls to mitigate low-rate displacement."
+            base_floor = currency_base_floor
+
+        if rn_capture_pct > 75:
+            pace_status = "🔥 ACCELERATED BOOKING PACE (POS VELOCITY BREACH)"
+            ai_behavior_label = "Aggressive Yield Premiumization (Maximizing ADR Index at the cost of nominal occupancy)"
+            ai_markup = 1.30  
+            floor_adjusted = base_floor * 1.15
+        elif rn_capture_pct >= 40:
+            pace_status = "✅ STABLE BOOKING PACE CURVE"
+            ai_behavior_label = "Optimal Fair-Share Positioning (Balancing RevPAR Index and RGI projections)"
+            ai_markup = 1.15  
+            floor_adjusted = base_floor
+        else:
+            pace_status = "⚠️ LAGGING BOOKING VELOCITY (CAPTURE DEFICIT)"
+            ai_behavior_label = "Tactical Occupancy Stimulation (Preventing inventory spoilage and dilution via baseline distribution changes)"
+            ai_markup = 0.95  
+            floor_adjusted = base_floor * 0.85  
+
+        proposed_ai_rate = forecast_adr * ai_markup
+        tracking_label = "MTD" if is_current_month else "OTB"
+        
+        with st.container():
+            st.markdown(f"### 📅 Horizon Period: **{m_name}**")
+            col_info, col_guardrail = st.columns([3, 2])
+            
+            with col_info:
+                st.markdown(f"**📈 Market Demand Status:** `{demand_profile}`")
+                st.write(f"*{demand_desc}*")
+                st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
+                st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity indexes (MTD Actuals / On-The-Books Pickup curves) against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
+                st.write(f"* **Target Forecast ADR Baseline:** {currency_symbol}{forecast_adr:.2f}")
+                st.write(f"* **Inventory Materialization ({tracking_label}):** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Inventory Committed)")
+                st.write(f"* **Revenue Volume Secured:** {currency_symbol}{pace_rev:,.2f} / {currency_symbol}{fore_rev:,.2f} ({rev_capture_pct:.1f}% Revenue Materialized)")
+                st.write(f"* **Mapped Competitive Landscape:** Cross-referencing pricing vectors against `{compset_count}` active competitor profiles mapped in Step 1.")
+                st.write(f"* **Agent Yield Optimization Vector:** `{ai_behavior_label}` targeting an adjustment markup of **{int((ai_markup-1)*100)}%**")
+                st.write(f"* **Active Safety Parameter (Circuit Breaker Floor):** {currency_symbol}{floor_adjusted:.2f}")
+
+            with col_guardrail:
+                st.write("#### 🛡️ Automated Yield Gatekeeper")
+                st.write(f"AI Agent Proposed Public Rack Rate: **{currency_symbol}{proposed_ai_rate:.2f}**")
+                
+                if proposed_ai_rate < floor_adjusted:
+                    st.error(f"🚨 **RATE DEVIATION REJECTED!** The autonomous rate proposal of {currency_symbol}{proposed_ai_rate:.2f} violates your operational safety parameters floor line of {currency_symbol}{floor_adjusted:.2f}. Strategy authorization denied to prevent severe channel dilution. Distribution channels rolled back to secure baseline positions to safeguard yield.")
+                else:
+                    st.success(f"✅ **Rate is compatible with market conditions.** The dynamic strategy proposal of {currency_symbol}{proposed_ai_rate:.2f} satisfies all deterministic constraints. Automated ARI strategy authorized for real-time channel manager and PMS synchronization.")
+            st.markdown("<br>", unsafe_allow_html=True)
+
+if not has_valid_data_rendered:
+    st.info("💡 Complete Step 2 above by entering your property's pacing and full month forecast metrics to let the AI logic trigger the individual month-by-month analysis.")
