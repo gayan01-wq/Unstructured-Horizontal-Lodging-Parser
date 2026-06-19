@@ -101,7 +101,6 @@ if "compset_grid_df" not in st.session_state:
 col_prop1, col_prop2 = st.columns([1, 1.2])
 with col_prop1:
     user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa", key="subject_hotel_input")
-    # Added capacity anchor
     total_rooms = st.number_input("Total Physical Room Inventory Capacity", min_value=1, value=150, step=1, key="total_rooms_input")
 
 with col_prop2:
@@ -141,13 +140,12 @@ st.markdown(f"**Profile Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;
 
 # --- 2. Dynamic Forward 3-Month Matrix Calendar Calculations ---
 current_datetime = datetime.now()
-months_data = [] # List of dicts storing month names, numbers, years, and days in month
+months_data = []
 current_month_num = current_datetime.month
 current_year = current_datetime.year
 
 for i in range(3):
     m_num = ((current_month_num + i - 1) % 12) + 1
-    # Adjust year if it wraps past December
     m_year = current_year + 1 if (current_month_num + i > 12) else current_year
     m_name = datetime(m_year, m_num, 1).strftime("%B")
     days_in_m = calendar.monthrange(m_year, m_num)[1]
@@ -238,12 +236,10 @@ for i in range(3):
     if fore_rn > 0 and fore_rev > 0:
         has_valid_data_rendered = True
         
-        # Calculate dynamic KPIs
         forecast_adr = fore_rev / fore_rn
         rn_capture_pct = (pace_rn / fore_rn) * 100
         rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
         
-        # CALCULATE TRUE PROJECTED FULL MONTH OCCUPANCY RATE
         total_available_capacity = total_rooms * days_in_month
         projected_occ_pct = (fore_rn / total_available_capacity) * 100
         pace_occ_pct = (pace_rn / total_available_capacity) * 100
@@ -298,7 +294,6 @@ for i in range(3):
                 st.markdown(f"**📊 Pacing Health & Velocity:** `{pace_status}`")
                 st.caption("💡 *Note: Rate recommendations are derived dynamically by cross-referencing your internal booking velocity matrix variables against full-month expected forecast baseline targets, modulated by external micro-climate demand constraints.*")
                 
-                # Dynamic Capacity and Pricing Metrics Display Row
                 st.write(f"* **Target Forecast ADR Baseline (Calculated):** {currency_symbol}{forecast_adr:.2f}")
                 st.write(f"* **Projected Capacity Occupancy:** `{projected_occ_pct:.1f}% Full Month Occupancy` (Active Pacing: {pace_occ_pct:.1f}%)")
                 st.write(f"* **Inventory Materialization ({tracking_label}):** {pace_rn} / {fore_rn} Room Nights ({rn_capture_pct:.1f}% Inventory Committed)")
