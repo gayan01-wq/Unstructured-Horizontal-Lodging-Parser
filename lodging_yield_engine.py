@@ -21,7 +21,6 @@ with col_m1:
 with col_m2:
     country = st.text_input("Destination Country", value="Oman")
 with col_m3:
-    # Expanded Comprehensive Multi-Region Currency Selector (Asian, Middle East, Europe, Americas)
     currency_options = {
         "USD ($) - United States Dollar": {"symbol": "$", "floor": 135.00, "factor": 1.0},
         "OMR (𐎱) - Omani Rial": {"symbol": "OMR ", "floor": 52.00, "factor": 0.38},
@@ -47,21 +46,30 @@ with col_m3:
     currency_base_floor = currency_options[selected_currency_key]["floor"]
 
 st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
-col_prop1, col_prop2 = st.columns([1, 1])
 
+# --- STEP 1 LIVE VERIFICATION SCANNER ---
+# Check inputs dynamically to build status indicators for Step 1 fields
+if "compset_grid_df" not in st.session_state:
+    default_compset_rows = {
+        "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
+        "Hotel Identity Name": ["Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub", "", "", "", "", ""]
+    }
+    st.session_state.compset_grid_df = pd.DataFrame(default_compset_rows)
+
+active_compset_check = [r["Hotel Identity Name"].strip() for _, r in st.session_state.compset_grid_df.iterrows() if r["Hotel Identity Name"].strip()]
+compset_verification = f"✅ {len(active_compset_check)} Competitor(s) Mapped" if active_compset_check else "📝 Awaiting Compset Entry"
+location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
+hotel_verification = "✅ Hotel Name Saved" if user_hotel.strip() if 'user_hotel' in locals() else "✅ Hotel Name Saved" else "📝 Awaiting Hotel Name"
+
+# Display Step 1 Verification Panel
+st.markdown(f"**Profile Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {location_verification} &nbsp;&nbsp;|&nbsp;&nbsp; {compset_verification}")
+
+col_prop1, col_prop2 = st.columns([1, 1])
 with col_prop1:
     user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa")
 
 with col_prop2:
     st.write("📋 **Map Competitive Set Names (Up to 8 Properties):**")
-    default_compset_rows = {
-        "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
-        "Hotel Identity Name": ["Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub", "", "", "", "", ""]
-    }
-    
-    if "compset_grid_df" not in st.session_state:
-        st.session_state.compset_grid_df = pd.DataFrame(default_compset_rows)
-        
     edited_compset_grid = st.data_editor(
         st.session_state.compset_grid_df,
         num_rows="fixed",
@@ -113,8 +121,7 @@ if "pacing_metrics_df" not in st.session_state or st.session_state.get("prev_cur
     st.session_state.pacing_metrics_df = pd.DataFrame(default_pacing_data)
     st.session_state.prev_currency_state = selected_currency_key
 
-# --- DYNAMIC NOTED MARK STATUS CHECKER ---
-# Inspect values inside the spreadsheet to instantly calculate user data entry completion flags
+# --- STEP 2 DATA STATUS TRACKING PANEL ---
 status_icons = []
 for i in range(3):
     p_rn = st.session_state.pacing_metrics_df.iloc[i * 2]["Room Nights"]
@@ -124,8 +131,7 @@ for i in range(3):
     else:
         status_icons.append(f"**{months_list[i]}:** 📝 Awaiting Entry")
 
-# Display a beautiful entry confirmation status bar right above the interactive table
-st.markdown(f"**Data Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {status_icons[0]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[1]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[2]}")
+st.markdown(f"**Metrics Status Tracking Verification Panel:** &nbsp;&nbsp;&nbsp;&nbsp; {status_icons[0]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[1]} &nbsp;&nbsp;|&nbsp;&nbsp; {status_icons[2]}")
 
 if st.button("🗑️ Clear Table Data (Reset Sheet Values)"):
     blank_pacing = {
