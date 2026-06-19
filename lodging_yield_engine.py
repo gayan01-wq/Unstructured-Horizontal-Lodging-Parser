@@ -88,8 +88,8 @@ with col_m3:
 
 st.markdown("#### 🏢 Property Identity & Competitive Set Mapping")
 
+# Fixed: Ensure default structure explicitly contains the identical rate dictionary key on init
 if "compset_grid_df" not in st.session_state:
-    # Initial benchmarks automatically converted based on selected currency
     default_compset_rows = {
         "Compset Index": [f"0{i}. Compset Name" for i in range(1, 9)],
         "Hotel Identity Name": ["Grand Plaza Resort", "Ocean View Boutique", "Metropolitan Hub", "", "", "", "", ""],
@@ -111,7 +111,6 @@ with col_prop2:
     )
     st.session_state.compset_grid_df = edited_compset_grid
     
-    # Track names and rates simultaneously for index averaging
     active_compset = []
     compset_rates = []
     for _, row in edited_compset_grid.iterrows():
@@ -121,8 +120,12 @@ with col_prop2:
             val_str = str(val).strip()
             if val_str != "" and val_str.lower() != "none":
                 active_compset.append(val_str)
-                if rate > 0:
-                    compset_rates.append(rate)
+                try:
+                    rate_val = float(rate)
+                    if rate_val > 0:
+                        compset_rates.append(rate_val)
+                except (ValueError, TypeError):
+                    pass
                     
     compset_count = len(active_compset)
     average_compset_rate = sum(compset_rates) / len(compset_rates) if len(compset_rates) > 0 else 0.0
@@ -223,7 +226,6 @@ for i in range(3):
     if fore_rn > 0 and fore_rev > 0:
         has_valid_data_rendered = True
         
-        # SYSTEM CALCULATES USER HOTEL ADR INTERNALLY FROM YOUR TYPED VALUES
         forecast_adr = fore_rev / fore_rn
         rn_capture_pct = (pace_rn / fore_rn) * 100
         rev_capture_pct = (pace_rev / fore_rev) * 100 if fore_rev > 0 else 0.0
@@ -262,7 +264,6 @@ for i in range(3):
         proposed_ai_rate = forecast_adr * ai_markup
         tracking_label = "MTD" if is_current_month else "OTB"
         
-        # CALCULATING YOUR DYNAMIC MARKET ARI INDEX LEAD/LAG PROJECTION
         if average_compset_rate > 0:
             ari_index = (proposed_ai_rate / average_compset_rate) * 100
             ari_string = f"{ari_index:.1f}% (Value Positioning to capture share)" if ari_index < 100 else f"{ari_index:.1f}% (Premium Market Leader Positioning)"
