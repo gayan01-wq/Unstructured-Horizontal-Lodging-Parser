@@ -5,6 +5,30 @@ from datetime import datetime
 # Page configuration setup
 st.set_page_config(page_title="Autonomous Revenue Intelligence Lab", layout="wide")
 
+# --- 🔒 SECURE PASSWORD GATEKEEPER LOOP ---
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+def check_login():
+    """Verifies access password string input directly"""
+    if st.session_state["pass_input"] == "Gayan2026":
+        st.session_state.authenticated = True
+    else:
+        st.error("🚨 Access Denied: Invalid System Password Token.")
+
+if not st.session_state.authenticated:
+    st.title("🔒 Enterprise Security Gateway")
+    st.markdown("### Autonomous Revenue Guardrail Lab System Lock")
+    st.text_input(
+        "Enter authorized credential token to access matrix framework:", 
+        type="password", 
+        key="pass_input", 
+        on_change=check_login
+    )
+    st.stop()  # Standard stop command kills compilation right here if auth is False
+# ------------------------------------------
+
+# --- ALL ENGINE OPERATIONS EXECUTE BELOW ONLY IF AUTHENTICATED ---
 st.title("🏨 Autonomous Revenue Guardrail Lab")
 st.markdown("""
 ### MTD/OTB vs. Forecast Dynamic Pricing Architecture
@@ -58,7 +82,6 @@ if "compset_grid_df" not in st.session_state:
 
 col_prop1, col_prop2 = st.columns([1, 1])
 with col_prop1:
-    # 1. We define the user_hotel input field first
     user_hotel = st.text_input("Your Property Name (Subject Hotel)", value="My Resort & Spa")
 
 with col_prop2:
@@ -73,7 +96,7 @@ with col_prop2:
     active_compset = [row["Hotel Identity Name"].strip() for _, row in edited_compset_grid.iterrows() if row["Hotel Identity Name"].strip()]
     compset_count = len(active_compset)
 
-# 2. Now that variables are defined, we place the Verification Panel cleanly below the entry blocks
+# Now that variables are defined, we place the Verification Panel cleanly below the entry blocks
 active_compset_check = [r["Hotel Identity Name"].strip() for _, r in st.session_state.compset_grid_df.iterrows() if r["Hotel Identity Name"].strip()]
 compset_verification = f"✅ {len(active_compset_check)} Competitor(s) Mapped" if active_compset_check else "📝 Awaiting Compset Entry"
 location_verification = "✅ Location Saved" if city.strip() and country.strip() else "📝 Awaiting Location"
